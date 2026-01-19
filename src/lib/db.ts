@@ -25,7 +25,12 @@ function createPrismaClient(): PrismaClient {
     })
   }
 
-  const pool = new Pool({ connectionString })
+  const pool = new Pool({
+    connectionString,
+    ssl: {
+      rejectUnauthorized: false, // Required for Supabase
+    },
+  })
   globalForPrisma.pool = pool
 
   // Create the Prisma adapter
