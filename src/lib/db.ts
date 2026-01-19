@@ -12,7 +12,17 @@ function createPrismaClient(): PrismaClient {
   const connectionString = process.env.DATABASE_URL
 
   if (!connectionString) {
-    throw new Error('DATABASE_URL environment variable is not set')
+    // During build time, DATABASE_URL might not be set
+    // Return a proxy that will throw on actual usage
+    console.warn('DATABASE_URL not set - database operations will fail')
+    return new Proxy({} as PrismaClient, {
+      get(_, prop) {
+        if (prop === 'then') return undefined // For promise detection
+        return () => {
+          throw new Error('DATABASE_URL environment variable is not set')
+        }
+      },
+    })
   }
 
   const pool = new Pool({ connectionString })
@@ -28,8 +38,19 @@ function createPrismaClient(): PrismaClient {
   })
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient()
+// Lazy initialization - only create when first accessed
+let _prisma: PrismaClient | undefined
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_, prop) {
+    if (!_prisma) {
+      _prisma = globalForPrisma.prisma ?? createPrismaClient()
+      if (process.env.NODE_ENV !== 'production') {
+        globalForPrisma.prisma = _prisma
+      }
+    }
+    return (_prisma as unknown as Record<string, unknown>)[prop as string]
+  },
+})
 
 export default prisma
