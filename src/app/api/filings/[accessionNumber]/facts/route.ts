@@ -87,7 +87,8 @@ export async function GET(
     ])
 
     // Group facts by tag for easier consumption
-    const groupedByTag = facts.reduce((acc: Record<string, typeof facts>, fact) => {
+    type FactType = typeof facts[number]
+    const groupedByTag = facts.reduce((acc: Record<string, FactType[]>, fact: FactType) => {
       const key = `${fact.taxonomy}:${fact.tag}`
       if (!acc[key]) {
         acc[key] = []
