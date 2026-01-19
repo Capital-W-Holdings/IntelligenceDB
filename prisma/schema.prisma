@@ -1,0 +1,609 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Company {
+  id                String    @id @default(cuid())
+  cik               String    @unique // "0001234567" (10 digits, zero-padded)
+  ticker            String?   // "ABBV"
+  name              String    // "AbbVie Inc."
+  sicCode           String    @map("sic_code") // "2834"
+  sicDescription    String?   @map("sic_description") // "Pharmaceutical Preparations"
+  sector            String?   // "Biotech", "Pharma", "MedDevice", "Payer", "Provider", "HealthIT"
+
+  // Research fields (enrichment)
+  businessOverview  String?   @map("business_overview") @db.Text
+  headquarters      String?
+  employeeCount     Int?      @map("employee_count")
+  foundedYear       Int?      @map("founded_year")
+  website           String?
+
+  // Metadata
+  firstSeenAt       DateTime  @default(now()) @map("first_seen_at")
+  lastFilingDate    DateTime? @map("last_filing_date")
+  lastEnrichedAt    DateTime? @map("last_enriched_at")
+
+  // Relations
+  filings           Filing[]
+  products          Product[]
+  competitors       CompanyCompetitor[]
+  risks             RiskFactor[]
+  guidance          Guidance[]
+  metrics           CompanyMetric[]
+  researchNotes     ResearchNote[]
+
+  @@index([sicCode])
+  @@index([sector])
+  @@index([ticker])
+  @@map("companies")
+}
+
+model Filing {
+  id                String    @id @default(cuid())
+  companyId         String    @map("company_id")
+  company           Company   @relation(fields: [companyId], references: [id])
+
+  accessionNumber   String    @unique @map("accession_number") // "0001193125-24-012345"
+  formType          String    @map("form_type") // "10-K", "10-K/A", "8-K", "10-Q"
+  filingDate        DateTime  @map("filing_date")
+  acceptedAt        DateTime? @map("accepted_at")
+  periodEndDate     DateTime? @map("period_end_date") // fiscal period
+
+  // Source info
+  primaryDocUrl     String    @map("primary_doc_url") // URL to main document
+  indexUrl          String    @map("index_url") // URL to filing index
+  filingSizeBytes   Int?      @map("filing_size_bytes")
+
+  // Processing status
+  status            String    @default("pending") // pending, ingested, parsed, extracted, enriched, failed
+  rawHtmlPath       String?   @map("raw_html_path") // local path to stored HTML
+
+  // Amendment handling
+  isAmendment       Boolean   @default(false) @map("is_amendment")
+  amendsAccession   String?   @map("amends_accession") // accession number of original if this is an amendment
+
+  // Relations
+  sections          FilingSection[]
+  xbrlFacts         XBRLFact[]
+  events            FilingEvent[]       // 8-K items
+  extractedFacts    ExtractedFact[]
+
+  createdAt         DateTime  @default(now()) @map("created_at")
+  processedAt       DateTime? @map("processed_at")
+
+  @@index([companyId])
+  @@index([formType])
+  @@index([filingDate])
+  @@index([status])
+  @@map("filings")
+}
+
+model FilingSection {
+  id              String    @id @default(cuid())
+  filingId        String    @map("filing_id")
+  filing          Filing    @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  sectionType     String    @map("section_type") // "item1", "item1a", "item7", "item8", "exhibit99"
+  sectionTitle    String    @map("section_title") // "Business", "Risk Factors", "MD&A"
+
+  rawText         String    @map("raw_text") @db.Text
+  summary         String?   @db.Text  // AI-generated summary
+  wordCount       Int       @map("word_count")
+
+  startOffset     Int       @map("start_offset") // position in source doc
+  endOffset       Int       @map("end_offset")
+
+  @@index([filingId])
+  @@index([sectionType])
+  @@map("filing_sections")
+}
+
+model XBRLFact {
+  id              String    @id @default(cuid())
+  filingId        String    @map("filing_id")
+  filing          Filing    @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  taxonomy        String    // "us-gaap", "dei", "custom"
+  tag             String    // "Revenues", "NetIncomeLoss"
+  label           String?   // Human-readable label
+
+  value           String    // Store as string, parse based on datatype
+  datatype        String    // "monetary", "shares", "percent", "string", "date"
+  unit            String?   // "USD", "shares", "pure"
+  decimals        Int?
+
+  periodType      String    @map("period_type") // "instant", "duration"
+  periodStart     DateTime? @map("period_start")
+  periodEnd       DateTime? @map("period_end")
+
+  segment         Json?     // dimension info for segment reporting
+
+  @@index([filingId])
+  @@index([tag])
+  @@index([periodEnd])
+  @@map("xbrl_facts")
+}
+
+model ExtractedFact {
+  id              String    @id @default(cuid())
+  filingId        String    @map("filing_id")
+  filing          Filing    @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  factType        String    @map("fact_type") // "revenue", "expense", "guidance", "headcount", "milestone", etc.
+  category        String    // "financial", "operational", "clinical", "regulatory"
+
+  label           String    // "Total Revenue", "R&D Expense"
+  value           String
+  valueNumeric    Float?    @map("value_numeric")
+  unit            String?
+
+  periodLabel     String?   @map("period_label") // "FY2024", "Q3 2024"
+  periodStart     DateTime? @map("period_start")
+  periodEnd       DateTime? @map("period_end")
+
+  // Provenance
+  sourceSection   String?   @map("source_section") // section_type
+  sourceXbrlTag   String?   @map("source_xbrl_tag")
+  textSnippet     String?   @map("text_snippet") @db.Text
+  confidence      Float     @default(1.0)
+
+  @@index([filingId])
+  @@index([factType])
+  @@map("extracted_facts")
+}
+
+model FilingEvent {
+  id              String    @id @default(cuid())
+  filingId        String    @map("filing_id")
+  filing          Filing    @relation(fields: [filingId], references: [id], onDelete: Cascade)
+
+  itemNumber      String    @map("item_number") // "1.01", "2.02", "5.02", "8.01"
+  itemTitle       String    @map("item_title") // "Entry into Material Definitive Agreement"
+
+  eventType       String    @map("event_type") // "acquisition", "earnings", "executive_change", "financing", etc.
+  eventDate       DateTime? @map("event_date")
+  summary         String?   @db.Text
+
+  rawText         String    @map("raw_text") @db.Text
+
+  @@index([filingId])
+  @@index([eventType])
+  @@index([itemNumber])
+  @@map("filing_events")
+}
+
+model RiskFactor {
+  id              String    @id @default(cuid())
+  companyId       String    @map("company_id")
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  filingId        String?   @map("filing_id") // source filing
+
+  category        String    // "regulatory", "clinical", "competitive", "financial", "operational"
+  title           String
+  description     String    @db.Text
+  severity        String?   // "high", "medium", "low"
+
+  firstAppeared   DateTime  @map("first_appeared")
+  lastUpdated     DateTime  @map("last_updated")
+  isNew           Boolean   @default(false) @map("is_new") // new in latest filing
+
+  @@index([companyId])
+  @@index([category])
+  @@map("risk_factors")
+}
+
+model Product {
+  id              String    @id @default(cuid())
+  companyId       String    @map("company_id")
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  name            String
+  category        String    // "drug", "device", "diagnostic", "software"
+  status          String    // "approved", "phase3", "phase2", "phase1", "preclinical", "discontinued"
+
+  indication      String?
+  approvalDate    DateTime? @map("approval_date")
+  revenueLatest   Float?    @map("revenue_latest")
+
+  description     String?   @db.Text
+  sourceFiling    String?   @map("source_filing") // accession number
+
+  @@index([companyId])
+  @@index([status])
+  @@map("products")
+}
+
+model Guidance {
+  id              String    @id @default(cuid())
+  companyId       String    @map("company_id")
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  filingId        String?   @map("filing_id")
+
+  metric          String    // "revenue", "eps", "operating_income"
+  period          String    // "FY2024", "Q1 2025"
+
+  low             Float?
+  high            Float?
+  point           Float?
+  unit            String    // "USD_millions", "USD_per_share"
+
+  issuedDate      DateTime  @map("issued_date")
+  isCurrent       Boolean   @default(true) @map("is_current")
+
+  textSnippet     String?   @map("text_snippet") @db.Text
+
+  @@index([companyId])
+  @@index([metric])
+  @@map("guidance")
+}
+
+model CompanyMetric {
+  id              String    @id @default(cuid())
+  companyId       String    @map("company_id")
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  metricName      String    @map("metric_name") // "cash_runway_months", "mlr", "r_and_d_intensity"
+  period          String    // "FY2024", "Q3 2024"
+  periodEnd       DateTime? @map("period_end")
+  value           Float
+  unit            String?
+
+  sourceFiling    String?   @map("source_filing") // accession
+  calculatedAt    DateTime  @default(now()) @map("calculated_at")
+
+  @@unique([companyId, metricName, period])
+  @@index([companyId])
+  @@index([metricName])
+  @@map("company_metrics")
+}
+
+model CompanyCompetitor {
+  id              String    @id @default(cuid())
+  companyId       String    @map("company_id")
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  competitorName  String    @map("competitor_name")
+  competitorCik   String?   @map("competitor_cik")
+  context         String?   // why they're competitors
+  source          String    // "filing", "research"
+
+  @@index([companyId])
+  @@map("company_competitors")
+}
+
+model ResearchNote {
+  id              String    @id @default(cuid())
+  companyId       String    @map("company_id")
+  company         Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  category        String    // "overview", "segment", "regulatory", "pipeline", "m_and_a"
+  content         String    @db.Text
+
+  sourceType      String    @map("source_type") // "filing", "company_website", "fda", "unknown"
+  sourceUrl       String?   @map("source_url")
+  sourceDate      DateTime? @map("source_date")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([companyId])
+  @@index([category])
+  @@map("research_notes")
+}
+
+model ModelOutput {
+  id              String    @id @default(cuid())
+  companyId       String    @map("company_id")
+
+  modelType       String    @map("model_type") // "income_statement", "balance_sheet", "cash_flow", "segment", "kpi"
+  version         Int       @default(1)
+
+  data            Json      // structured model data
+
+  generatedAt     DateTime  @default(now()) @map("generated_at")
+  sourceFilings   String[]  @map("source_filings") // array of accession numbers used
+
+  @@index([companyId])
+  @@index([modelType])
+  @@map("model_outputs")
+}
+
+model PipelineRun {
+  id              String    @id @default(cuid())
+
+  runType         String    @map("run_type") // "backfill", "daily", "intraday"
+  startedAt       DateTime  @default(now()) @map("started_at")
+  completedAt     DateTime? @map("completed_at")
+
+  status          String    @default("running") // running, completed, failed
+
+  filingsFound    Int       @default(0) @map("filings_found")
+  filingsIngested Int       @default(0) @map("filings_ingested")
+  filingsFailed   Int       @default(0) @map("filings_failed")
+
+  errorLog        String?   @map("error_log") @db.Text
+
+  @@index([runType])
+  @@index([startedAt])
+  @@map("pipeline_runs")
+}
+
+model AuditLog {
+  id              String    @id @default(cuid())
+
+  entityType      String    @map("entity_type") // "company", "filing", "extraction"
+  entityId        String    @map("entity_id")
+  action          String    // "created", "updated", "enriched", "exported"
+
+  details         Json?
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// =====================================================
+// INTELLIGENCE PLATFORM MODELS
+// =====================================================
+
+// Insider Trading (Form 4)
+model InsiderTransaction {
+  id              String    @id @default(cuid())
+  companyId       String    @map("company_id")
+
+  // Insider info
+  insiderName     String    @map("insider_name")
+  insiderTitle    String?   @map("insider_title") // CEO, CFO, Director, 10% Owner
+  insiderCik      String?   @map("insider_cik")
+
+  // Transaction details
+  transactionType String    @map("transaction_type") // "P" = Purchase, "S" = Sale, "A" = Award, "M" = Exercise
+  transactionCode String?   @map("transaction_code") // More specific codes
+  shares          Float
+  pricePerShare   Float?    @map("price_per_share")
+  totalValue      Float?    @map("total_value")
+
+  sharesOwnedAfter Float?   @map("shares_owned_after")
+
+  transactionDate DateTime  @map("transaction_date")
+  filingDate      DateTime  @map("filing_date")
+
+  // Source
+  accessionNumber String    @map("accession_number")
+  sourceUrl       String?   @map("source_url")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([companyId])
+  @@index([transactionDate])
+  @@index([transactionType])
+  @@map("insider_transactions")
+}
+
+// Clinical Pipeline Tracking
+model ClinicalTrial {
+  id              String    @id @default(cuid())
+  companyId       String    @map("company_id")
+
+  // Drug/Product info
+  drugName        String    @map("drug_name")
+  genericName     String?   @map("generic_name")
+
+  // Trial details
+  nctId           String?   @map("nct_id") // ClinicalTrials.gov ID
+  phase           String    // "preclinical", "phase1", "phase1_2", "phase2", "phase2_3", "phase3", "filed", "approved"
+  status          String    // "recruiting", "active", "completed", "suspended", "terminated"
+
+  indication      String    // Disease/condition
+  therapeuticArea String?   @map("therapeutic_area") // "oncology", "immunology", "cns", etc.
+
+  // Timeline
+  startDate       DateTime? @map("start_date")
+  estimatedCompletion DateTime? @map("estimated_completion")
+  actualCompletion DateTime? @map("actual_completion")
+
+  // FDA dates
+  pdufaDate       DateTime? @map("pdufa_date") // FDA action date
+  adcomDate       DateTime? @map("adcom_date") // Advisory committee meeting
+
+  // Source
+  sourceFiling    String?   @map("source_filing")
+  sourceUrl       String?   @map("source_url")
+  notes           String?   @db.Text
+
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([companyId])
+  @@index([phase])
+  @@index([therapeuticArea])
+  @@map("clinical_trials")
+}
+
+// FDA Actions
+model FDAAction {
+  id              String    @id @default(cuid())
+  companyId       String    @map("company_id")
+
+  actionType      String    @map("action_type") // "approval", "crl", "warning_letter", "483", "recall", "breakthrough", "fast_track", "orphan"
+  drugName        String?   @map("drug_name")
+  indication      String?
+
+  actionDate      DateTime  @map("action_date")
+  outcome         String?   // "approved", "rejected", "pending"
+
+  description     String?   @db.Text
+  sourceUrl       String?   @map("source_url")
+  sourceFiling    String?   @map("source_filing")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([companyId])
+  @@index([actionType])
+  @@index([actionDate])
+  @@map("fda_actions")
+}
+
+// Audit Opinions
+model AuditOpinion {
+  id                  String    @id @default(cuid())
+  companyId           String    @map("company_id")
+  filingId            String    @map("filing_id")
+
+  fiscalYear          Int       @map("fiscal_year")
+  auditorName         String    @map("auditor_name")
+  auditorChanged      Boolean   @default(false) @map("auditor_changed") // Did they change auditors?
+
+  opinionType         String    @map("opinion_type") // "unqualified", "qualified", "adverse", "disclaimer"
+  hasGoingConcern     Boolean   @default(false) @map("has_going_concern")
+  hasMaterialWeakness Boolean   @default(false) @map("has_material_weakness")
+  hasSignificantDeficiency Boolean @default(false) @map("has_significant_deficiency")
+
+  criticalAuditMatters Json?    @map("critical_audit_matters") // Array of CAMs
+
+  sourceFiling        String    @map("source_filing")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  @@unique([companyId, fiscalYear])
+  @@index([companyId])
+  @@map("audit_opinions")
+}
+
+// Guidance Actuals (for tracking accuracy)
+model GuidanceActual {
+  id              String    @id @default(cuid())
+  guidanceId      String    @map("guidance_id")
+
+  actualValue     Float     @map("actual_value")
+  actualDate      DateTime  @map("actual_date") // When reported
+  sourceFiling    String    @map("source_filing")
+
+  // Calculated
+  beatMissAmount  Float?    @map("beat_miss_amount") // Actual - Midpoint
+  beatMissPercent Float?    @map("beat_miss_percent")
+  wasInRange      Boolean?  @map("was_in_range") // If guidance had a range
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@unique([guidanceId])
+  @@index([guidanceId])
+  @@map("guidance_actuals")
+}
+
+// Company Scores (computed intelligence scores)
+model CompanyScore {
+  id              String    @id @default(cuid())
+  companyId       String    @map("company_id")
+
+  scoreType       String    @map("score_type") // "beneish_m", "altman_z", "piotroski_f", "guidance_accuracy", "earnings_quality"
+  period          String    // "FY2024", "TTM"
+
+  score           Float
+  components      Json?     // Breakdown of score components
+  interpretation  String?   // "high_manipulation_risk", "low_bankruptcy_risk", etc.
+
+  percentileRank  Float?    @map("percentile_rank") // vs peers
+
+  sourceFiling    String?   @map("source_filing")
+  calculatedAt    DateTime  @default(now()) @map("calculated_at")
+
+  @@unique([companyId, scoreType, period])
+  @@index([companyId])
+  @@index([scoreType])
+  @@map("company_scores")
+}
+
+// Risk Factor Changes (detailed diff tracking)
+model RiskFactorChange {
+  id              String    @id @default(cuid())
+  companyId       String    @map("company_id")
+
+  filingId        String    @map("filing_id") // New filing
+  priorFilingId   String?   @map("prior_filing_id") // Previous filing
+
+  changeType      String    @map("change_type") // "added", "removed", "modified"
+  category        String    // "regulatory", "clinical", "competitive", "financial", "legal"
+
+  riskTitle       String    @map("risk_title")
+  currentText     String?   @map("current_text") @db.Text
+  priorText       String?   @map("prior_text") @db.Text
+
+  severity        Int?      // 1-5 scale
+  materialityScore Float?   @map("materiality_score") // AI-generated
+
+  aiSummary       String?   @map("ai_summary") @db.Text // What changed in plain English
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([companyId])
+  @@index([filingId])
+  @@index([changeType])
+  @@map("risk_factor_changes")
+}
+
+// Enhanced 8-K Events with AI categorization
+model SmartEvent {
+  id              String    @id @default(cuid())
+  filingEventId   String    @map("filing_event_id") // Links to FilingEvent
+  companyId       String    @map("company_id")
+
+  // AI-enhanced categorization
+  primaryCategory String    @map("primary_category") // "clinical", "regulatory", "financial", "executive", "legal", "strategic"
+  subCategory     String?   @map("sub_category") // More specific
+
+  sentiment       String?   // "positive", "negative", "neutral"
+  materialityScore Float?   @map("materiality_score") // 1-10 scale
+
+  // Key entities extracted
+  peopleInvolved  Json?     @map("people_involved") // Names, titles
+  amountsInvolved Json?     @map("amounts_involved") // Dollar values
+  datesInvolved   Json?     @map("dates_involved") // Key dates mentioned
+  drugsInvolved   Json?     @map("drugs_involved") // Drug names mentioned
+
+  aiSummary       String?   @map("ai_summary") @db.Text // Plain English summary
+
+  // For tracking market impact
+  stockPriceAtEvent Float?  @map("stock_price_at_event")
+  stockPriceDay1    Float?  @map("stock_price_day_1") // Next trading day
+  stockPriceWeek1   Float?  @map("stock_price_week_1")
+
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([companyId])
+  @@index([primaryCategory])
+  @@index([materialityScore])
+  @@map("smart_events")
+}
+
+// Alerts
+model Alert {
+  id              String    @id @default(cuid())
+
+  alertType       String    @map("alert_type") // "8k_material", "insider_buy", "risk_change", "cash_runway", "guidance_change"
+  companyId       String?   @map("company_id")
+
+  title           String
+  description     String    @db.Text
+  severity        String    // "critical", "high", "medium", "low"
+
+  // Source
+  sourceType      String    @map("source_type") // "filing", "computed", "external"
+  sourceId        String?   @map("source_id") // Filing ID or other
+
+  // Status
+  isRead          Boolean   @default(false) @map("is_read")
+  isDismissed     Boolean   @default(false) @map("is_dismissed")
+
+  triggeredAt     DateTime  @default(now()) @map("triggered_at")
+
+  @@index([companyId])
+  @@index([alertType])
+  @@index([triggeredAt])
+  @@map("alerts")
+}
