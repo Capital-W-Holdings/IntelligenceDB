@@ -249,8 +249,8 @@ export async function GET(
       metrics: company?.metrics?.[0] || null,
       summary: {
         totalFilings: company?.filings?.length || 0,
-        total10K: company?.filings?.filter(f => f.formType.includes('10-K')).length || 0,
-        total8K: company?.filings?.filter(f => f.formType.includes('8-K')).length || 0,
+        total10K: company?.filings?.filter((f: { formType: string }) => f.formType.includes('10-K')).length || 0,
+        total8K: company?.filings?.filter((f: { formType: string }) => f.formType.includes('8-K')).length || 0,
         events8KCount: 0,
         insiderTxCount: 0,
         riskFactorChanges: 0,
