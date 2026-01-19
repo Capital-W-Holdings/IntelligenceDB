@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatDate, formatCurrency, formatPercent } from '@/lib/utils'
+import { ChevronLeft, ChevronRight, Download, FileText } from 'lucide-react'
 
 interface CompanyMetrics {
   id: string
@@ -48,12 +49,12 @@ interface IntelligenceData {
 }
 
 const NAV_ITEMS = [
-  { href: '', label: 'Overview', icon: '📊', description: 'Company overview and financials' },
-  { href: '/intelligence', label: 'Scores', icon: '🎯', description: 'Earnings quality & financial health' },
-  { href: '/risk-factors', label: 'Risks', icon: '⚠️', description: 'Year-over-year risk analysis' },
-  { href: '/events', label: '8-K Events', icon: '📰', description: 'Material event categorization' },
-  { href: '/insiders', label: 'Insiders', icon: '👔', description: 'Form 4 trading analysis' },
-  { href: '/model', label: 'Model', icon: '📈', description: 'Interactive financial model' },
+  { href: '', label: 'Overview', icon: '📊', description: 'Company overview' },
+  { href: '/intelligence', label: 'Scores', icon: '🎯', description: 'Financial health' },
+  { href: '/risk-factors', label: 'Risks', icon: '⚠️', description: 'Risk analysis' },
+  { href: '/events', label: '8-K', icon: '📰', description: 'Material events' },
+  { href: '/insiders', label: 'Insiders', icon: '👔', description: 'Form 4 trades' },
+  { href: '/model', label: 'Model', icon: '📈', description: 'Financial model' },
 ]
 
 export default function CompanyDetailPage() {
@@ -69,7 +70,6 @@ export default function CompanyDetailPage() {
     async function fetchData() {
       setLoading(true)
       try {
-        // Fetch company data and intelligence summary in parallel
         const [companyRes, summaryRes] = await Promise.all([
           fetch(`/api/companies/${cik}`),
           fetch(`/api/companies/${cik}/summary`).catch(() => null),
@@ -169,15 +169,59 @@ export default function CompanyDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sticky Header */}
-      <div className="bg-white border-b shadow-sm sticky top-0 z-40">
+      <div className="bg-white border-b shadow-sm sticky top-14 sm:top-16 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-4">
-            <div className="flex items-center justify-between">
+          <div className="py-3 sm:py-4">
+            {/* Mobile Header */}
+            <div className="flex flex-col gap-3 sm:hidden">
+              <div className="flex items-center justify-between">
+                <Link href="/companies" className="text-gray-400 hover:text-gray-600 p-1 -ml-1">
+                  <ChevronLeft className="h-5 w-5" />
+                </Link>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDownloadReport}
+                    disabled={downloadingReport}
+                    className="h-8 px-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleDownloadModel}
+                    disabled={downloading}
+                    className="h-8 px-2 bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-lg font-bold text-gray-900 truncate max-w-[200px]">{company.name}</h1>
+                  {company.ticker && (
+                    <Badge variant="outline" className="font-mono text-xs">{company.ticker}</Badge>
+                  )}
+                  {intelligence?.earningsQuality && (
+                    <Badge className={`text-xs ${ratingColors[intelligence.earningsQuality.overallRating] || 'bg-gray-100'}`}>
+                      {intelligence.earningsQuality.overallRating.toUpperCase()}
+                    </Badge>
+                  )}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  CIK: {company.cik}
+                  {company.sector && ` • ${company.sector}`}
+                </div>
+              </div>
+            </div>
+
+            {/* Desktop Header */}
+            <div className="hidden sm:flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <Link href="/search" className="text-gray-400 hover:text-gray-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="m15 18-6-6 6-6"/>
-                  </svg>
+                <Link href="/companies" className="text-gray-400 hover:text-gray-600">
+                  <ChevronLeft className="h-5 w-5" />
                 </Link>
                 <div>
                   <div className="flex items-center gap-3">
@@ -211,10 +255,7 @@ export default function CompanyDetailPage() {
                   disabled={downloadingReport}
                   className="gap-2"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                  </svg>
+                  <FileText className="h-4 w-4" />
                   Report
                 </Button>
                 <Button
@@ -223,11 +264,7 @@ export default function CompanyDetailPage() {
                   disabled={downloading}
                   className="gap-2 bg-blue-600 hover:bg-blue-700"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                    <polyline points="7 10 12 15 17 10"/>
-                    <line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
+                  <Download className="h-4 w-4" />
                   {downloading ? 'Generating...' : 'Excel Model'}
                 </Button>
               </div>
@@ -236,95 +273,95 @@ export default function CompanyDetailPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Intelligence Navigation Cards */}
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Intelligence Tools</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        {/* Intelligence Navigation Cards - Horizontal scroll on mobile */}
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Intelligence Tools</h2>
+          <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 lg:grid-cols-6 sm:overflow-visible">
             {NAV_ITEMS.map((item, index) => (
               <Link
                 key={item.href}
                 href={`/companies/${cik}${item.href}`}
                 className={`
-                  block p-4 rounded-xl border-2 transition-all hover:shadow-md
+                  flex-shrink-0 w-[100px] sm:w-auto block p-3 sm:p-4 rounded-xl border-2 transition-all hover:shadow-md active:scale-95
                   ${index === 0
                     ? 'bg-blue-50 border-blue-200 hover:border-blue-400'
                     : 'bg-white border-gray-200 hover:border-blue-300'
                   }
                 `}
               >
-                <div className="text-2xl mb-2">{item.icon}</div>
-                <div className="font-medium text-sm text-gray-900">{item.label}</div>
-                <div className="text-xs text-gray-500 mt-1 line-clamp-2">{item.description}</div>
+                <div className="text-xl sm:text-2xl mb-1 sm:mb-2">{item.icon}</div>
+                <div className="font-medium text-xs sm:text-sm text-gray-900">{item.label}</div>
+                <div className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 line-clamp-2 hidden sm:block">{item.description}</div>
               </Link>
             ))}
           </div>
         </div>
 
         {/* Financial Snapshot */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
           {/* Key Metrics */}
           <div className="lg:col-span-2">
             <Card>
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg">Financial Snapshot</CardTitle>
-                <CardDescription>Latest reported metrics</CardDescription>
+              <CardHeader className="pb-3 sm:pb-4 p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">Financial Snapshot</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Latest reported metrics</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
                 {latestMetrics ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
                     <div>
-                      <div className="text-sm text-gray-500 mb-1">Revenue</div>
-                      <div className="text-2xl font-bold">
+                      <div className="text-xs sm:text-sm text-gray-500 mb-1">Revenue</div>
+                      <div className="text-lg sm:text-2xl font-bold">
                         {latestMetrics.revenue ? formatCurrency(latestMetrics.revenue) : 'N/A'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500 mb-1">Net Income</div>
-                      <div className={`text-2xl font-bold ${latestMetrics.netIncome && latestMetrics.netIncome < 0 ? 'text-red-600' : ''}`}>
+                      <div className="text-xs sm:text-sm text-gray-500 mb-1">Net Income</div>
+                      <div className={`text-lg sm:text-2xl font-bold ${latestMetrics.netIncome && latestMetrics.netIncome < 0 ? 'text-red-600' : ''}`}>
                         {latestMetrics.netIncome ? formatCurrency(latestMetrics.netIncome) : 'N/A'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500 mb-1">Cash</div>
-                      <div className="text-2xl font-bold">
+                      <div className="text-xs sm:text-sm text-gray-500 mb-1">Cash</div>
+                      <div className="text-lg sm:text-2xl font-bold">
                         {latestMetrics.cashAndEquivalents ? formatCurrency(latestMetrics.cashAndEquivalents) : 'N/A'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500 mb-1">Total Assets</div>
-                      <div className="text-2xl font-bold">
+                      <div className="text-xs sm:text-sm text-gray-500 mb-1">Total Assets</div>
+                      <div className="text-lg sm:text-2xl font-bold">
                         {latestMetrics.totalAssets ? formatCurrency(latestMetrics.totalAssets) : 'N/A'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500 mb-1">Gross Margin</div>
-                      <div className="text-lg font-semibold">
+                      <div className="text-xs sm:text-sm text-gray-500 mb-1">Gross Margin</div>
+                      <div className="text-base sm:text-lg font-semibold">
                         {latestMetrics.grossMargin ? formatPercent(latestMetrics.grossMargin * 100) : 'N/A'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500 mb-1">Operating Margin</div>
-                      <div className="text-lg font-semibold">
+                      <div className="text-xs sm:text-sm text-gray-500 mb-1">Operating Margin</div>
+                      <div className="text-base sm:text-lg font-semibold">
                         {latestMetrics.operatingMargin ? formatPercent(latestMetrics.operatingMargin * 100) : 'N/A'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500 mb-1">R&D Intensity</div>
-                      <div className="text-lg font-semibold">
+                      <div className="text-xs sm:text-sm text-gray-500 mb-1">R&D Intensity</div>
+                      <div className="text-base sm:text-lg font-semibold">
                         {latestMetrics.rdIntensity ? formatPercent(latestMetrics.rdIntensity * 100) : 'N/A'}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500 mb-1">Cash Runway</div>
-                      <div className={`text-lg font-semibold ${latestMetrics.cashRunwayMonths && latestMetrics.cashRunwayMonths < 12 ? 'text-red-600' : ''}`}>
-                        {latestMetrics.cashRunwayMonths ? `${latestMetrics.cashRunwayMonths.toFixed(0)} months` : 'N/A'}
+                      <div className="text-xs sm:text-sm text-gray-500 mb-1">Cash Runway</div>
+                      <div className={`text-base sm:text-lg font-semibold ${latestMetrics.cashRunwayMonths && latestMetrics.cashRunwayMonths < 12 ? 'text-red-600' : ''}`}>
+                        {latestMetrics.cashRunwayMonths ? `${latestMetrics.cashRunwayMonths.toFixed(0)}mo` : 'N/A'}
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No financial metrics available.</p>
+                  <div className="text-center py-6 sm:py-8 text-gray-500">
+                    <p className="text-sm">No financial metrics available.</p>
                     <Link href={`/companies/${cik}/intelligence`}>
                       <Button variant="outline" size="sm" className="mt-4">
                         Run Intelligence Analysis
@@ -339,47 +376,47 @@ export default function CompanyDetailPage() {
           {/* Quick Scores */}
           <div>
             <Card className="h-full">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg">Quick Scores</CardTitle>
-                <CardDescription>At-a-glance health indicators</CardDescription>
+              <CardHeader className="pb-3 sm:pb-4 p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">Quick Scores</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Health indicators</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
                 {intelligence?.earningsQuality ? (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm font-medium">Overall Rating</span>
-                      <Badge className={ratingColors[intelligence.earningsQuality.overallRating] || 'bg-gray-100'}>
+                  <div className="space-y-3 sm:space-y-4">
+                    <div className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                      <span className="text-xs sm:text-sm font-medium">Overall Rating</span>
+                      <Badge className={`text-xs ${ratingColors[intelligence.earningsQuality.overallRating] || 'bg-gray-100'}`}>
                         {intelligence.earningsQuality.overallRating.toUpperCase()}
                       </Badge>
                     </div>
                     {intelligence.earningsQuality.piotroskiFScore !== undefined && (
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-sm font-medium">Piotroski F-Score</span>
-                        <span className={`font-bold ${intelligence.earningsQuality.piotroskiFScore >= 7 ? 'text-green-600' : intelligence.earningsQuality.piotroskiFScore >= 4 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      <div className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                        <span className="text-xs sm:text-sm font-medium">Piotroski F</span>
+                        <span className={`font-bold text-sm ${intelligence.earningsQuality.piotroskiFScore >= 7 ? 'text-green-600' : intelligence.earningsQuality.piotroskiFScore >= 4 ? 'text-yellow-600' : 'text-red-600'}`}>
                           {intelligence.earningsQuality.piotroskiFScore}/9
                         </span>
                       </div>
                     )}
                     {intelligence.earningsQuality.altmanZ && (
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-sm font-medium">Altman Z-Score</span>
-                        <span className={`font-bold ${intelligence.earningsQuality.altmanZ.interpretation === 'safe' ? 'text-green-600' : intelligence.earningsQuality.altmanZ.interpretation === 'gray' ? 'text-yellow-600' : 'text-red-600'}`}>
+                      <div className="flex items-center justify-between p-2 sm:p-3 bg-gray-50 rounded-lg">
+                        <span className="text-xs sm:text-sm font-medium">Altman Z</span>
+                        <span className={`font-bold text-sm ${intelligence.earningsQuality.altmanZ.interpretation === 'safe' ? 'text-green-600' : intelligence.earningsQuality.altmanZ.interpretation === 'gray' ? 'text-yellow-600' : 'text-red-600'}`}>
                           {intelligence.earningsQuality.altmanZ.score.toFixed(2)}
                         </span>
                       </div>
                     )}
                     <Link href={`/companies/${cik}/intelligence`}>
-                      <Button variant="outline" size="sm" className="w-full mt-2">
-                        View All Scores →
+                      <Button variant="outline" size="sm" className="w-full mt-2 h-9">
+                        View All Scores
                       </Button>
                     </Link>
                   </div>
                 ) : (
-                  <div className="text-center py-6 text-gray-500">
-                    <div className="text-3xl mb-2">🎯</div>
-                    <p className="text-sm mb-4">Run analysis to see scores</p>
+                  <div className="text-center py-4 sm:py-6 text-gray-500">
+                    <div className="text-2xl sm:text-3xl mb-2">🎯</div>
+                    <p className="text-xs sm:text-sm mb-3 sm:mb-4">Run analysis to see scores</p>
                     <Link href={`/companies/${cik}/intelligence`}>
-                      <Button size="sm">Analyze Now</Button>
+                      <Button size="sm" className="h-9">Analyze Now</Button>
                     </Link>
                   </div>
                 )}
@@ -390,48 +427,46 @@ export default function CompanyDetailPage() {
 
         {/* Recent Filings */}
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg">Recent SEC Filings</CardTitle>
-                <CardDescription>Latest regulatory filings</CardDescription>
+                <CardTitle className="text-base sm:text-lg">Recent SEC Filings</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Latest regulatory filings</CardDescription>
               </div>
-              <Badge variant="secondary">{company.filings.length} filings</Badge>
+              <Badge variant="secondary" className="text-xs">{company.filings.length} filings</Badge>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0 sm:p-6 sm:pt-0">
             {company.filings.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No filings found for this company.</p>
+              <p className="text-gray-500 text-center py-8 text-sm">No filings found for this company.</p>
             ) : (
               <div className="divide-y">
                 {company.filings.slice(0, 10).map((filing) => (
                   <Link
                     key={filing.accessionNumber}
                     href={`/filings/${filing.accessionNumber}`}
-                    className="flex items-center justify-between py-3 hover:bg-gray-50 -mx-4 px-4 transition-colors group"
+                    className="flex items-center justify-between py-3 px-4 sm:py-3 sm:-mx-0 sm:px-0 hover:bg-gray-50 sm:hover:bg-transparent transition-colors group active:bg-gray-100"
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4">
                       <Badge
-                        className={
+                        className={`text-xs ${
                           filing.formType.includes('10-K') ? 'bg-purple-100 text-purple-800' :
                           filing.formType.includes('10-Q') ? 'bg-blue-100 text-blue-800' :
                           filing.formType.includes('8-K') ? 'bg-orange-100 text-orange-800' :
                           'bg-gray-100 text-gray-800'
-                        }
+                        }`}
                       >
                         {filing.formType}
                       </Badge>
-                      <span className="text-sm text-gray-600">
+                      <span className="text-xs sm:text-sm text-gray-600">
                         {formatDate(filing.filingDate)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-400 font-mono">
+                      <span className="text-xs text-gray-400 font-mono hidden sm:inline">
                         {filing.accessionNumber}
                       </span>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 group-hover:text-gray-600">
-                        <path d="m9 18 6-6-6-6"/>
-                      </svg>
+                      <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-gray-600" />
                     </div>
                   </Link>
                 ))}

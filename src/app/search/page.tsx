@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { formatDate } from '@/lib/utils'
+import { ChevronRight, Search } from 'lucide-react'
 
 interface SearchResults {
   companies: Array<{
@@ -48,11 +49,9 @@ const SEARCH_SUGGESTIONS = [
   'FDA approval',
   'clinical trial',
   'acquisition',
-  'merger',
   'Phase 3',
   'revenue',
   'guidance',
-  'executive',
 ]
 
 export default function SearchPage() {
@@ -91,38 +90,42 @@ export default function SearchPage() {
     (results?.events.length || 0)
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Search</h1>
-        <p className="text-gray-600">
-          Search across companies, filings, and healthcare events
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <div className="mb-4 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Search</h1>
+        <p className="text-sm sm:text-base text-gray-600">
+          Search companies, filings, and events
         </p>
       </div>
 
       {/* Search Form */}
-      <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <form onSubmit={handleSubmit} className="flex gap-4">
-          <Input
-            type="text"
-            placeholder="Search for FDA approvals, clinical trials, acquisitions..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="flex-1 text-lg"
-          />
-          <Button type="submit" disabled={loading || query.length < 2}>
+      <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6 sm:mb-8">
+        <form onSubmit={handleSubmit} className="flex gap-2 sm:gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="FDA approvals, clinical trials..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="pl-10 h-11 sm:h-12 text-base"
+            />
+          </div>
+          <Button type="submit" disabled={loading || query.length < 2} className="h-11 sm:h-12 px-4 sm:px-6">
             {loading ? 'Searching...' : 'Search'}
           </Button>
         </form>
 
         {!searched && (
           <div className="mt-4">
-            <p className="text-sm text-gray-500 mb-2">Try searching for:</p>
+            <p className="text-xs sm:text-sm text-gray-500 mb-2">Try searching for:</p>
             <div className="flex flex-wrap gap-2">
               {SEARCH_SUGGESTIONS.map((suggestion) => (
                 <Button
                   key={suggestion}
                   variant="outline"
                   size="sm"
+                  className="text-xs h-8"
                   onClick={() => {
                     setQuery(suggestion)
                     handleSearch(suggestion)
@@ -144,35 +147,40 @@ export default function SearchPage() {
         </div>
       ) : searched && results ? (
         <>
-          <p className="text-gray-600 mb-6">
+          <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
             Found {totalResults} result{totalResults !== 1 ? 's' : ''} for &quot;{query}&quot;
           </p>
 
           {/* Companies */}
           {results.companies.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
+            <div className="mb-6 sm:mb-8">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">
                 Companies ({results.companies.length})
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {results.companies.map((company) => (
                   <Link key={company.cik} href={`/companies/${company.cik}`}>
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg">{company.name}</CardTitle>
-                        <CardDescription>
-                          {company.ticker && (
-                            <span className="font-mono font-bold text-gray-900">
-                              {company.ticker}
-                            </span>
-                          )}
-                          {company.ticker && ' · '}
-                          CIK: {company.cik}
-                        </CardDescription>
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer h-full active:bg-gray-50">
+                      <CardHeader className="pb-2 p-3 sm:p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-sm sm:text-base truncate">{company.name}</CardTitle>
+                            <CardDescription className="text-xs sm:text-sm">
+                              {company.ticker && (
+                                <span className="font-mono font-bold text-gray-900">
+                                  {company.ticker}
+                                </span>
+                              )}
+                              {company.ticker && ' · '}
+                              CIK: {company.cik}
+                            </CardDescription>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0 sm:hidden" />
+                        </div>
                       </CardHeader>
                       {company.sector && (
-                        <CardContent>
-                          <Badge variant="secondary">{company.sector}</Badge>
+                        <CardContent className="p-3 sm:p-4 pt-0">
+                          <Badge variant="secondary" className="text-xs">{company.sector}</Badge>
                         </CardContent>
                       )}
                     </Card>
@@ -184,32 +192,34 @@ export default function SearchPage() {
 
           {/* Filings */}
           {results.filings.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
+            <div className="mb-6 sm:mb-8">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">
                 Filings ({results.filings.length})
               </h2>
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {results.filings.map((filing) => (
                   <Link key={filing.accessionNumber} href={`/filings/${filing.accessionNumber}`}>
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                      <CardContent className="py-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer active:bg-gray-50">
+                      <CardContent className="py-3 sm:py-4 px-3 sm:px-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
                             <Badge
                               variant={filing.formType === '8-K' ? 'default' : 'secondary'}
+                              className="text-xs flex-shrink-0"
                             >
                               {filing.formType}
                             </Badge>
-                            <div>
-                              <p className="font-medium">{filing.company.name}</p>
-                              <p className="text-sm text-gray-500">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm sm:text-base truncate">{filing.company.name}</p>
+                              <p className="text-xs sm:text-sm text-gray-500">
                                 {filing.company.ticker && (
                                   <span className="font-mono">{filing.company.ticker} · </span>
                                 )}
-                                Filed {formatDate(filing.filingDate)}
+                                {formatDate(filing.filingDate)}
                               </p>
                             </div>
                           </div>
+                          <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0 sm:hidden" />
                         </div>
                       </CardContent>
                     </Card>
@@ -221,22 +231,22 @@ export default function SearchPage() {
 
           {/* Events */}
           {results.events.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
+            <div className="mb-6 sm:mb-8">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4">
                 Events ({results.events.length})
               </h2>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {results.events.map((event) => (
                   <Link
                     key={event.id}
                     href={`/filings/${event.filing.accessionNumber}`}
                   >
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                      <CardHeader className="pb-2">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <CardTitle className="text-lg">{event.itemTitle}</CardTitle>
-                            <CardDescription>
+                    <Card className="hover:shadow-md transition-shadow cursor-pointer active:bg-gray-50">
+                      <CardHeader className="pb-2 p-3 sm:p-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <CardTitle className="text-sm sm:text-base line-clamp-2">{event.itemTitle}</CardTitle>
+                            <CardDescription className="text-xs sm:text-sm mt-1">
                               {event.filing.company.name}
                               {event.filing.company.ticker && (
                                 <span className="font-mono ml-1">
@@ -249,16 +259,17 @@ export default function SearchPage() {
                               {formatDate(event.filing.filingDate)}
                             </CardDescription>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
                             {event.eventType && (
-                              <Badge variant="secondary">{event.eventType}</Badge>
+                              <Badge variant="secondary" className="text-xs">{event.eventType}</Badge>
                             )}
+                            <ChevronRight className="h-4 w-4 text-gray-400 sm:hidden" />
                           </div>
                         </div>
                       </CardHeader>
                       {event.summary && (
-                        <CardContent>
-                          <p className="text-sm text-gray-700 line-clamp-2">
+                        <CardContent className="p-3 sm:p-4 pt-0">
+                          <p className="text-xs sm:text-sm text-gray-700 line-clamp-2">
                             {event.summary}
                           </p>
                         </CardContent>
@@ -274,7 +285,7 @@ export default function SearchPage() {
             <div className="text-center py-12">
               <p className="text-gray-600">No results found for &quot;{query}&quot;.</p>
               <p className="text-sm text-gray-500 mt-2">
-                Try searching for different terms or check your spelling.
+                Try searching for different terms.
               </p>
             </div>
           )}

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import { MobileNav } from '@/components/mobile-nav'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -18,12 +19,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <div className="min-h-screen bg-gray-50">
-          <nav className="bg-white border-b border-gray-200">
+          <nav className="bg-white border-b border-gray-200 sticky top-0 z-40">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between h-16">
-                <div className="flex">
-                  <a href="/" className="flex items-center">
-                    <span className="text-xl font-bold text-gray-900">
+              <div className="flex justify-between h-14 sm:h-16">
+                <div className="flex items-center">
+                  <MobileNav />
+                  <a href="/" className="flex items-center ml-2 sm:ml-0">
+                    <span className="text-lg sm:text-xl font-bold text-gray-900 truncate">
                       Healthcare Filings DB
                     </span>
                   </a>

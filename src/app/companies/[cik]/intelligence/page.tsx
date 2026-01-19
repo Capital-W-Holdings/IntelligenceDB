@@ -277,33 +277,33 @@ export default function IntelligencePage() {
     <div className="min-h-screen bg-neutral-50">
       {/* Header */}
       <div className="bg-white border-b border-neutral-200">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-sm text-neutral-500 mb-2">
-                <Link href={`/companies/${cik}`} className="hover:text-blue-600 transition-colors">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-neutral-500 mb-2">
+                <Link href={`/companies/${cik}`} className="hover:text-blue-600 transition-colors truncate max-w-[150px] sm:max-w-none">
                   {data.company.name}
                 </Link>
                 <span>/</span>
                 <span className="text-neutral-900 font-medium">Intelligence</span>
               </div>
-              <div className="flex items-center gap-4">
-                <h1 className="text-2xl font-bold text-neutral-900">
-                  Earnings Quality & Risk Analysis
+              <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+                <h1 className="text-xl sm:text-2xl font-bold text-neutral-900">
+                  Earnings Quality Analysis
                 </h1>
                 {data.company.ticker && (
-                  <Badge variant="outline" className="font-mono">
+                  <Badge variant="outline" className="font-mono text-xs">
                     {data.company.ticker}
                   </Badge>
                 )}
               </div>
-              <p className="text-neutral-500 mt-1">
+              <p className="text-xs sm:text-sm text-neutral-500 mt-1">
                 FY{data.fiscalYear} Analysis
               </p>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-neutral-500 mb-2">Overall Rating</p>
-              <Badge className={`text-lg px-4 py-2 ${ratingColors[data.overallRating]}`}>
+            <div className="flex items-center justify-between sm:block sm:text-right">
+              <p className="text-xs sm:text-sm text-neutral-500 sm:mb-2">Overall Rating</p>
+              <Badge className={`text-sm sm:text-lg px-3 sm:px-4 py-1 sm:py-2 ${ratingColors[data.overallRating]}`}>
                 {data.overallRating.charAt(0).toUpperCase() + data.overallRating.slice(1)}
               </Badge>
             </div>
@@ -312,7 +312,7 @@ export default function IntelligencePage() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-8">
         {/* Flags */}
         {(data.redFlags.length > 0 || data.greenFlags.length > 0) && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -344,7 +344,7 @@ export default function IntelligencePage() {
         )}
 
         {/* Score Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Beneish M-Score */}
           {data.scores.beneishMScore && (
             <ScoreCard
@@ -600,12 +600,12 @@ export default function IntelligencePage() {
         )}
 
         {/* Navigation */}
-        <div className="flex justify-between items-center pt-4">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-4">
           <Link href={`/companies/${cik}`}>
-            <Button variant="outline">← Back to Company</Button>
+            <Button variant="outline" className="w-full sm:w-auto h-10">← Back to Company</Button>
           </Link>
           <Link href={`/companies/${cik}/model`}>
-            <Button>View Financial Model →</Button>
+            <Button className="w-full sm:w-auto h-10">View Financial Model →</Button>
           </Link>
         </div>
       </div>

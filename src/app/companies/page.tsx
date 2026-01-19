@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { ChevronRight } from 'lucide-react'
 
 interface Company {
   cik: string
@@ -18,10 +19,10 @@ interface Company {
 }
 
 const SECTORS = [
-  { value: 'all', label: 'All Sectors' },
-  { value: 'Biotech/Pharma', label: 'Biotech/Pharma' },
-  { value: 'Medical Devices', label: 'Medical Devices' },
-  { value: 'Healthcare Services', label: 'Healthcare Services' },
+  { value: 'all', label: 'All' },
+  { value: 'Biotech/Pharma', label: 'Biotech' },
+  { value: 'Medical Devices', label: 'Devices' },
+  { value: 'Healthcare Services', label: 'Services' },
   { value: 'Payers', label: 'Payers' },
 ]
 
@@ -64,32 +65,34 @@ export default function CompaniesPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Companies</h1>
-        <p className="text-gray-600">
-          Browse healthcare companies by sector and view their SEC filings
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <div className="mb-4 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Companies</h1>
+        <p className="text-sm sm:text-base text-gray-600">
+          Browse healthcare companies by sector
         </p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
+      <div className="bg-white rounded-lg shadow p-3 sm:p-4 mb-4 sm:mb-6">
+        <form onSubmit={handleSearch} className="space-y-3 sm:space-y-0 sm:flex sm:gap-4">
           <div className="flex-1">
             <Input
               type="text"
               placeholder="Search by name or ticker..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              className="h-11 text-base"
             />
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 -mx-1 px-1 sm:mx-0 sm:px-0">
             {SECTORS.map((s) => (
               <Button
                 key={s.value}
                 type="button"
                 variant={sector === s.value ? 'default' : 'outline'}
                 size="sm"
+                className="flex-shrink-0 h-9 px-3"
                 onClick={() => {
                   setSector(s.value)
                   setPage(1)
@@ -114,15 +117,16 @@ export default function CompaniesPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Mobile: List view, Desktop: Grid view */}
+          <div className="space-y-2 sm:space-y-0 sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
             {companies.map((company) => (
               <Link key={company.cik} href={`/companies/${company.cik}`}>
-                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
-                  <CardHeader className="pb-2">
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full active:bg-gray-50">
+                  <CardHeader className="pb-2 p-3 sm:p-4 sm:pb-2">
                     <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">{company.name}</CardTitle>
-                        <CardDescription>
+                      <div className="flex-1 min-w-0 pr-2">
+                        <CardTitle className="text-base sm:text-lg truncate">{company.name}</CardTitle>
+                        <CardDescription className="text-xs sm:text-sm">
                           {company.ticker && (
                             <span className="font-mono font-bold text-gray-900">
                               {company.ticker}
@@ -132,15 +136,16 @@ export default function CompaniesPage() {
                           CIK: {company.cik}
                         </CardDescription>
                       </div>
+                      <ChevronRight className="h-5 w-5 text-gray-400 flex-shrink-0 sm:hidden" />
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
                     <div className="flex items-center justify-between">
                       {company.sector && (
-                        <Badge variant="secondary">{company.sector}</Badge>
+                        <Badge variant="secondary" className="text-xs">{company.sector}</Badge>
                       )}
                       {company._count && (
-                        <span className="text-sm text-gray-500">
+                        <span className="text-xs sm:text-sm text-gray-500">
                           {company._count.filings} filings
                         </span>
                       )}
@@ -153,21 +158,23 @@ export default function CompaniesPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-8">
+            <div className="flex justify-center items-center gap-2 mt-6 sm:mt-8">
               <Button
                 variant="outline"
                 disabled={page === 1}
                 onClick={() => setPage(page - 1)}
+                className="h-10 px-4"
               >
                 Previous
               </Button>
-              <span className="flex items-center px-4 text-sm text-gray-600">
-                Page {page} of {totalPages}
+              <span className="flex items-center px-3 text-sm text-gray-600">
+                {page} / {totalPages}
               </span>
               <Button
                 variant="outline"
                 disabled={page === totalPages}
                 onClick={() => setPage(page + 1)}
+                className="h-10 px-4"
               >
                 Next
               </Button>
