@@ -122,7 +122,7 @@ export async function GET(
         offset,
         hasMore: offset + facts.length < totalCount,
       },
-      availableTags: uniqueTags.map(t => ({
+      availableTags: uniqueTags.map((t: { taxonomy: string; tag: string; _count: { tag: number } }) => ({
         concept: `${t.taxonomy}:${t.tag}`,
         taxonomy: t.taxonomy,
         tag: t.tag,
