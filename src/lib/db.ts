@@ -30,6 +30,9 @@ function createPrismaClient(): PrismaClient {
     ssl: {
       rejectUnauthorized: false, // Required for Supabase
     },
+    max: 5, // Limit pool size for serverless
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
   })
   globalForPrisma.pool = pool
 
